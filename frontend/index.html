@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Blueprint Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f3f4f6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: #1f2937;
+        }
+
+        .app-container {
+            max-width: 1000px;
+            margin: 40px auto;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+
+        .btn-smart {
+            background: var(--primary);
+            color: white;
+            border-radius: 10px;
+            padding: 12px 25px;
+            font-weight: 600;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn-smart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+            color: white;
+        }
+
+        .preview-box {
+            width: 100%;
+            height: 250px;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #f9fafb;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        pre {
+            background: #111827;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container app-container">
+        <div class="row mb-5 text-center">
+            <h1 class="fw-bold">Smart Manufacturing <span class="text-primary">Blueprint AI</span></h1>
+            <p class="text-muted">Orchestrated Vision & Text Analysis Engine</p>
+        </div>
+
+        <div class="row g-4">
+            <!-- Input Block -->
+            <div class="col-lg-5">
+                <div class="glass-card">
+                    <h5 class="mb-4">1. Input Data Analog</h5>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Gambar Teknik (.jpg / .png)</label>
+                        <input type="file" class="form-control" id="imageFile" accept="image/*">
+                    </div>
+                    <div class="preview-box mb-3" id="previewContainer">
+                        <span class="text-muted small">No image selected</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Atau Input Teks Cetak Biru</label>
+                        <textarea id="textInput" class="form-control" rows="5"
+                            placeholder="Tempelkan data BOM atau spesifikasi di sini..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Mode Analisis</label>
+                        <select class="form-select" id="modeSelect">
+                            <option value="auto">Auto (Smart Detect)</option>
+                            <option value="vlm">VLM Vision (Qwen2-VL)</option>
+                            <option value="llm">Text Only (Qwen 0.5B - Light)</option>
+                        </select>
+                    </div>
+
+                    <button id="startBtn" class="btn btn-smart w-100 mt-2">
+                        <span id="btnText">MULAI ANALISIS</span>
+                        <div id="spinner" class="spinner-border spinner-border-sm ms-2 d-none"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Result Block -->
+            <div class="col-lg-7">
+                <div class="glass-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="m-0">2. Hasil Keputusan AI</h5>
+                        <span id="engineBadge" class="badge bg-secondary">Standby</span>
+                    </div>
+
+                    <div id="resultContent">
+                        <div class="text-center py-5 text-muted">
+                            <p>Upload gambar atau masukkan teks untuk memulai orkestrasi AI.</p>
+                        </div>
+                    </div>
+
+                    <div id="jsonContainer" class="mt-4 d-none">
+                        <h6>Raw JSON Output:</h6>
+                        <pre id="rawJson"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "http://localhost:8000";
+        let currentImagePath = null;
+
+        // Image Preview
+        document.getElementById('imageFile').onchange = e => {
+            const [file] = e.target.files;
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('previewContainer').innerHTML = `<img src="${e.target.result}">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        document.getElementById('startBtn').onclick = async () => {
+            const imageFile = document.getElementById('imageFile').files[0];
+            const textData = document.getElementById('textInput').value;
+            const btn = document.getElementById('startBtn');
+            const btnText = document.getElementById('btnText');
+            const spinner = document.getElementById('spinner');
+
+            // UI LOCK
+            btn.disabled = true;
+            btnText.innerText = "SEDANG MEMPROSES...";
+            spinner.classList.remove('d-none');
+
+            try {
+                let imagePath = null;
+
+                // Step 1: Upload image if present
+                if (imageFile) {
+                    const formData = new FormData();
+                    formData.append('file', imageFile);
+                    const upRes = await fetch(`${API}/upload`, { method: 'POST', body: formData });
+                    const upData = await upRes.json();
+                    imagePath = upData.image_path;
+                }
+
+                if (!imagePath) throw new Error("Mohon pilih gambar teknik terlebih dahulu.");
+
+                // Step 2: Dual-Engine Analysis
+                const res = await fetch(`${API}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_path: imagePath,
+                        user_text: textData,
+                        prompt: "Analisis gambar teknik ini, sebutkan komponen (nama, jumlah) dan materialnya."
+                    })
+                });
+
+                const result = await res.json();
+                if (!res.ok) throw new Error(result.detail);
+
+                renderResult(result);
+                document.getElementById('engineBadge').innerText = "Moondream2 Vision Active";
+                document.getElementById('engineBadge').className = "badge bg-primary";
+
+            } catch (err) {
+                alert("Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = "MULAI ANALISIS";
+                spinner.classList.add('d-none');
+            }
+        };
+
+        function renderResult(data) {
+            const content = document.getElementById('resultContent');
+            const jsonArea = document.getElementById('jsonContainer');
+            jsonArea.classList.remove('d-none');
+
+            // Moondream returns 'analysis' string
+            const analysisText = data.analysis || "No analysis returned.";
+            content.innerHTML = `<div class="p-3 bg-light rounded border">${analysisText.replace(/\n/g, '<br>')}</div>`;
+            document.getElementById('rawJson').innerText = JSON.stringify(data, null, 2);
+        }
+    </script>
+
+</body>
+
+</html>
