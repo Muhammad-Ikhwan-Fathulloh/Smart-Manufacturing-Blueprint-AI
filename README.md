@@ -83,9 +83,6 @@ In this stage, the **Qwen2-VL** model focuses purely on the visual content of th
 }
 ```
 
-### 2. Reasoning Refinement (`/analyze/llm`)
-After Stage 1, the **Qwen 2.5** model takes the raw vision output and structures it into a professional technical report based on your specific requirements.
-
 ![VLM Analysis Interface](images/analyze_vlm.png)
 
 
@@ -96,6 +93,9 @@ After Stage 1, the **Qwen 2.5** model takes the raw vision output and structures
   "status": "success"
 }
 ```
+
+### 2. Reasoning Refinement (`/analyze/llm`)
+After Stage 1, the **Qwen 2.5** model takes the raw vision output and structures it into a professional technical report based on your specific requirements.
 
 ## 📝 How It Works
 1. **Upload** a technical blueprint.
