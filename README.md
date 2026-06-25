@@ -58,14 +58,48 @@ Start the FastAPI backend — both GGUF engines are managed automatically in the
 cd backend
 .\venv\Scripts\activate
 uvicorn main:app --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Then open `frontend/index.html` in your browser.
 
+## � Step-by-Step Analysis Example
+
+The system uses a two-stage process to ensure focus and efficiency.
+
+### 1. Vision Analysis (`/analyze/vlm`)
+In this stage, the **Qwen2-VL** model focuses purely on the visual content of the image.
+
+**Input Image:**
+![Technical Blueprint](file:///d:/Smart%20Manufacturing%20Blueprint%20Analyzer/images/gambar_teknik.jpg)
+
+**Example Request:**
+```json
+{
+  "image_path": "D:\\Smart Manufacturing Blueprint Analyzer\\backend\\uploads\\gambar_teknik.jpg",
+  "user_text": "",
+  "vision_data": "",
+  "prompt": "Lakukan analisis mendalam pada gambar teknik ini. Sebutkan komponen (nama, spesifikasi, jumlah), deteksi anomali jika ada, dan berikan rekomendasi teknis."
+}
+```
+
+**Example Response (`vision_raw`):**
+```json
+{
+  "vision_raw": "Untuk melakukan analisis mendalam pada gambar teknik ini, berikut adalah beberapa hal yang perlu diperhatikan:\n\n1. **Nama dan Spesifikasi:**\n   - **Crank Pin:** Material: Forged Steel, Size: 45C, Quantity: 1\n   - **Crank:** Material: Forged Steel, Size: 45C, Quantity: 1\n   - **Nuts:** Material: MS, Quantity: 4\n   - **Washers:** Material: MS, Quantity: 4\n\n2. **Jumlah:**\n   - **Crank Pin:** 1\n   - **Crank:** 1\n   - **Nuts:** 4\n   - **Washers:** 4\n\n3. **Deteksi Anomali:**\n   - **Anomali:** Tidak ada anomali yang ditemukan dalam gambar teknik ini.\n\n4. **Rekomendasi Teknis:**\n   - **Material:** Material yang digunakan untuk membuat crank pin dan crank harus dipilih dengan sangat hati-hati...",
+  "status": "success"
+}
+```
+
+### 2. Reasoning Refinement (`/analyze/llm`)
+After Stage 1, the **Qwen 2.5** model takes the raw vision output and structures it into a professional technical report based on your specific requirements.
+
+![VLM Analysis Interface](file:///d:/Smart%20Manufacturing%20Blueprint%20Analyzer/images/analyze_vlm.png)
+
 ## 📝 How It Works
-1. **Upload** a technical blueprint or engineering drawing.
-2. **Provide instructions** (optional) to focus the analysis on specific components or materials.
-3. **Get results** — the Vision Engine extracts visual details, and the Reasoning Engine compiles them into a structured technical report.
+1. **Upload** a technical blueprint.
+2. **Vision Stage**: The AI extracts raw observational data (Stage 1).
+3. **Reasoning Stage**: Click **"Susun Laporan Teknis"** (optional) to generate a formatted engineering report in Indonesian (Stage 2).
 
 ## ⚖️ License
 MIT License
